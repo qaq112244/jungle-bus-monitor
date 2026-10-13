@@ -215,7 +215,7 @@ def generate_index_html(today_summary: str, current_box_class: str, daily_record
 
         <div class="footer">
             官網連結: <a href="{URL}" target="_blank" rel="noopener">African Safari Jungle Bus</a><br>
-            系統每 15 分鐘自動查詢官網一次 ｜ 頁面每 5 分鐘自動重整 ｜ 詳細紀錄請見 <a href="history.log">history.log</a>
+            系統於每日 08:00 - 16:45 (日本時間) 每 15 分鐘自動查詢官網一次 ｜ 頁面每 5 分鐘自動重整 ｜ 詳細紀錄請見 <a href="history.log">history.log</a>
         </div>
     </div>
 </body>
