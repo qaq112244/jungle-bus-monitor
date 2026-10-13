@@ -37,7 +37,7 @@ def save_state(state: dict):
 
 
 def append_history_log(entry: str):
-    """將每一次的檢查（含未完售及完整通知句）完整保留在 LOG 檔"""
+    """將每一次的檢查（含未完售及完整通知句）記錄在 LOG 檔"""
     with open(HISTORY_LOG, "a", encoding="utf-8") as f:
         f.write(entry + "\n")
 
@@ -62,13 +62,13 @@ def fetch_latest_page() -> str:
 
 
 def generate_index_html(today_summary: str, current_box_class: str, daily_records: list):
-    """產生專屬儀表板 HTML：顯示 日期、星期、剩餘少量時間、完售時間 四個欄位"""
+    """產生專屬儀表板 HTML：顯示 日期、星期、剩餘少量時間、完售時間"""
     rows_html = ""
     for rec in reversed(daily_records):
         date_str = rec.get("date", "")
         weekday_str = rec.get("weekday", "")
         few_left_time = rec.get("few_left_time", "-")
-        sold_out_time = rec.get("sold_out_time") or rec.get("time", "-")
+        sold_out_time = rec.get("sold_out_time", "-")
 
         sold_out_display = f"<strong>{sold_out_time}</strong>" if sold_out_time != "-" else '<span style="color:#718096;">-</span>'
         few_left_display = f'<span style="color:#dd6b20; font-weight:600;">{few_left_time}</span>' if few_left_time != "-" else '<span style="color:#718096;">-</span>'
@@ -183,6 +183,7 @@ def generate_index_html(today_summary: str, current_box_class: str, daily_record
         .footer {{
             margin-top: 28px;
             font-size: 12px;
+            line-height: 1.8;
             color: #a0aec0;
             text-align: center;
         }}
@@ -197,7 +198,7 @@ def generate_index_html(today_summary: str, current_box_class: str, daily_record
             <div class="current-status">{today_summary}</div>
         </div>
 
-        <h3>📅 每日歷史列表</h3>
+        <h3>📅 每日歷史列表 (日本時間)</h3>
         <table>
             <thead>
                 <tr>
@@ -214,7 +215,7 @@ def generate_index_html(today_summary: str, current_box_class: str, daily_record
 
         <div class="footer">
             官網連結: <a href="{URL}" target="_blank" rel="noopener">African Safari Jungle Bus</a><br>
-            詳細的每一次檢查紀錄請見 <a href="history.log">history.log</a> | 頁面每 5 分鐘自動重整
+            系統每 15 分鐘自動查詢官網一次 ｜ 頁面每 5 分鐘自動重整 ｜ 詳細紀錄請見 <a href="history.log">history.log</a>
         </div>
     </div>
 </body>
@@ -231,7 +232,7 @@ def generate_readme_md(today_summary: str, daily_records: list):
         date_str = rec.get("date", "")
         weekday_str = rec.get("weekday", "")
         few_left = rec.get("few_left_time", "-")
-        sold_out = rec.get("sold_out_time") or rec.get("time", "-")
+        sold_out = rec.get("sold_out_time", "-")
         sold_out_fmt = f"**{sold_out}**" if sold_out != "-" else "-"
         rows += f"| {date_str} | {weekday_str} | {few_left} | {sold_out_fmt} |\n"
 
@@ -242,18 +243,18 @@ def generate_readme_md(today_summary: str, daily_records: list):
 
 > **官網連結**：[{URL}]({URL})  
 > **今日狀態**：**{today_summary}**  
-> *詳細的每次 15 分鐘檢查紀錄可於 [history.log](history.log) 中查看。*
+> *詳細的每次檢查紀錄可於 [history.log](history.log) 中查看。*
 
 ---
 
-### 📅 每日歷史清單
+### 📅 每日歷史列表 (日本時間)
 
 | 日期 | 星期 | 剩餘少量時間 | 完售時間 |
 | :--- | :--- | :--- | :--- |
 {rows}
 
 ---
-*由 GitHub Actions 於每日 08:00 - 16:45 (JST) 每 15 分鐘自動更新。*
+*由 GitHub Actions 於每日 08:00 - 16:45 (JST) 每 15 分鐘自動查詢官網更新。*
 """
     with open(README_MD, "w", encoding="utf-8") as f:
         f.write(md_content)
@@ -267,9 +268,30 @@ def main():
     weekday_str = WEEKDAY_MAP[now.weekday()]
 
     state = load_state()
-    # 相容舊版鍵名 sold_out_records
-    daily_records = state.get("daily_records") or state.get("sold_out_records", [])
+    daily_records = state.get("daily_records", [])
 
+    existing_today = next((r for r in daily_records if r.get("date") == today_str), None)
+
+    # 1. 當日完售鎖定機制（若今日已完售，狀態永久鎖定，不受下班撤除字樣影響）
+    if existing_today and existing_today.get("sold_out_time", "-") != "-":
+        first_sold = existing_today["sold_out_time"]
+        few_time = existing_today.get("few_left_time", "-")
+        if few_time != "-":
+            today_summary = f"今日已完售！在{now.year}年{now.month}月{now.day}日，{weekday_str}，Jungle Bus 票在{first_sold}賣完（於 {few_time} 首度剩餘少量）"
+        else:
+            today_summary = f"在{now.year}年{now.month}月{now.day}日，{weekday_str}，Jungle Bus 票在{first_sold}賣完"
+
+        current_box_class = "soldout"
+        log_line = f"[{now_str}] [已完售] 今日已於 {first_sold} 完售，維持今日完售狀態鎖定。"
+        print(log_line)
+        append_history_log(log_line)
+
+        save_state(state)
+        generate_index_html(today_summary, current_box_class, daily_records)
+        generate_readme_md(today_summary, daily_records)
+        return
+
+    # 2. 抓取官網檢查最新狀態
     print(f"[{now_str}] 正在檢查官網最新狀態...")
     try:
         html = fetch_latest_page()
@@ -279,14 +301,10 @@ def main():
         append_history_log(log_line)
         return
 
-    # 尋找今日是否已有紀錄項目
-    existing_today = next((r for r in daily_records if r.get("date") == today_str), None)
-
-    # 1. 判斷完售
+    # 判斷完售
     if SOLD_OUT_KEYWORD in html:
         current_box_class = "soldout"
         if not existing_today:
-            # 今日第一次被記錄，直接是完售狀態
             new_record = {
                 "date": today_str,
                 "weekday": weekday_str,
@@ -298,30 +316,23 @@ def main():
             log_line = f"[{now_str}] [完售] 首次偵測到完售: {new_record['message']}"
             today_summary = new_record["message"]
         else:
-            # 今日已有紀錄，更新/鎖定完售時間
-            if not existing_today.get("sold_out_time") or existing_today.get("sold_out_time") == "-":
-                existing_today["sold_out_time"] = time_str
-                existing_today["message"] = f"在{now.year}年{now.month}月{now.day}日，{weekday_str}，Jungle Bus 票在{time_str}賣完"
-                log_line = f"[{now_str}] [完售] 首次偵測到完售: {existing_today['message']}"
-            else:
-                first_sold = existing_today["sold_out_time"]
-                log_line = f"[{now_str}] [完售] 維持完售狀態 (首度完售時間: {first_sold})"
-
-            first_sold = existing_today.get("sold_out_time", time_str)
+            existing_today["sold_out_time"] = time_str
+            existing_today["message"] = f"在{now.year}年{now.month}月{now.day}日，{weekday_str}，Jungle Bus 票在{time_str}賣完"
+            log_line = f"[{now_str}] [完售] 首次偵測到完售: {existing_today['message']}"
+            
             few_time = existing_today.get("few_left_time", "-")
             if few_time != "-":
-                today_summary = f"今日已完售！在{now.year}年{now.month}月{now.day}日，{weekday_str}，Jungle Bus 票在{first_sold}賣完（於 {few_time} 首度剩餘少量）"
+                today_summary = f"今日已完售！在{now.year}年{now.month}月{now.day}日，{weekday_str}，Jungle Bus 票在{time_str}賣完（於 {few_time} 首度剩餘少量）"
             else:
-                today_summary = f"在{now.year}年{now.month}月{now.day}日，{weekday_str}，Jungle Bus 票在{first_sold}賣完"
+                today_summary = existing_today["message"]
 
         print(log_line)
         append_history_log(log_line)
 
-    # 2. 判斷剩餘少量
+    # 判斷剩餘少量
     elif FEW_LEFT_KEYWORD in html:
         current_box_class = "fewleft"
         if not existing_today:
-            # 今日首次出現「剩餘少量」
             new_record = {
                 "date": today_str,
                 "weekday": weekday_str,
@@ -333,8 +344,7 @@ def main():
             log_line = f"[{now_str}] [剩餘少量] 今日首次出現剩餘少量提示 (時間: {time_str})"
             today_summary = f"今日票券所剩無幾（於 {time_str} 首度出現剩餘少量提示，目前尚未完售）"
         else:
-            # 今日已有紀錄
-            if not existing_today.get("few_left_time") or existing_today.get("few_left_time") == "-":
+            if existing_today.get("few_left_time", "-") == "-":
                 existing_today["few_left_time"] = time_str
                 log_line = f"[{now_str}] [剩餘少量] 今日首次出現剩餘少量提示 (時間: {time_str})"
             else:
@@ -347,7 +357,7 @@ def main():
         print(log_line)
         append_history_log(log_line)
 
-    # 3. 正常販售中
+    # 正常販售中
     else:
         current_box_class = ""
         log_line = f"[{now_str}] [尚未完售] 正常販售中 (未出現完售或告急提示)"
@@ -360,13 +370,10 @@ def main():
         else:
             today_summary = f"今日尚未完售 (正常販售中，最後檢查時間: {time_str} JST)"
 
-    # 儲存狀態
+    # 儲存與產生儀表板
     state["daily_records"] = daily_records
-    if "sold_out_records" in state:
-        del state["sold_out_records"]  # 統一移至 daily_records
     save_state(state)
 
-    # 更新儀表板 HTML 與 README
     generate_index_html(today_summary, current_box_class, daily_records)
     generate_readme_md(today_summary, daily_records)
     print("已成功更新儀表板 (index.html, README.md) 與 LOG (history.log)")
