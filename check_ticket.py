@@ -37,7 +37,7 @@ def save_state(state: dict):
 
 
 def append_history_log(entry: str):
-    """將每一次的檢查（含未完售）寫入 LOG 檔"""
+    """將每一次的檢查（含未完售及完整通知句）完整保留在 LOG 檔"""
     with open(HISTORY_LOG, "a", encoding="utf-8") as f:
         f.write(entry + "\n")
 
@@ -62,25 +62,23 @@ def fetch_latest_page() -> str:
 
 
 def generate_index_html(today_summary: str, is_sold_out_today: bool, sold_out_records: list):
-    """產生專屬儀表板 HTML：僅記錄每日完售歷史"""
+    """產生專屬儀表板 HTML：僅顯示 日期、星期、完售時間 三個欄位"""
     rows_html = ""
     for rec in reversed(sold_out_records):
         date_str = rec.get("date", "")
         weekday_str = rec.get("weekday", "")
         time_str = rec.get("time", "")
-        msg = rec.get("message", "")
 
         rows_html += f"""
         <tr>
             <td class="date-cell">{date_str}</td>
             <td><span class="weekday-badge">{weekday_str}</span></td>
             <td class="time-cell"><strong>{time_str}</strong></td>
-            <td>{msg}</td>
         </tr>
         """
 
     if not rows_html:
-        rows_html = '<tr><td colspan="4" style="text-align:center; color:#a0aec0; padding:24px;">尚無完售紀錄</td></tr>'
+        rows_html = '<tr><td colspan="3" style="text-align:center; color:#a0aec0; padding:24px;">尚無完售紀錄</td></tr>'
 
     html_content = f"""<!DOCTYPE html>
 <html lang="zh-Hant">
@@ -98,7 +96,7 @@ def generate_index_html(today_summary: str, is_sold_out_today: bool, sold_out_re
             padding: 20px;
         }}
         .container {{
-            max-width: 820px;
+            max-width: 680px;
             margin: 0 auto;
             background: #fff;
             padding: 28px;
@@ -137,7 +135,7 @@ def generate_index_html(today_summary: str, is_sold_out_today: bool, sold_out_re
         }}
         th, td {{
             text-align: left;
-            padding: 12px 14px;
+            padding: 12px 16px;
             border-bottom: 1px solid #edf2f7;
             font-size: 14px;
         }}
@@ -158,7 +156,7 @@ def generate_index_html(today_summary: str, is_sold_out_today: bool, sold_out_re
         }}
         .weekday-badge {{
             display: inline-block;
-            padding: 2px 6px;
+            padding: 2px 8px;
             border-radius: 4px;
             background: #edf2f7;
             color: #4a5568;
@@ -188,7 +186,6 @@ def generate_index_html(today_summary: str, is_sold_out_today: bool, sold_out_re
                     <th>日期</th>
                     <th>星期</th>
                     <th>完售時間</th>
-                    <th>紀錄內容</th>
                 </tr>
             </thead>
             <tbody>
@@ -209,13 +206,13 @@ def generate_index_html(today_summary: str, is_sold_out_today: bool, sold_out_re
 
 
 def generate_readme_md(today_summary: str, sold_out_records: list):
-    """產生 GitHub 倉庫首頁 README.md"""
+    """產生 GitHub 倉庫首頁 README.md：僅顯示 日期、星期、完售時間"""
     rows = ""
     for rec in reversed(sold_out_records):
-        rows += f"| {rec.get('date')} | {rec.get('weekday')} | **{rec.get('time')}** | {rec.get('message')} |\n"
+        rows += f"| {rec.get('date')} | {rec.get('weekday')} | **{rec.get('time')}** |\n"
 
     if not rows:
-        rows = "| - | - | - | 尚無完售紀錄 |\n"
+        rows = "| - | - | 尚無完售紀錄 |\n"
 
     md_content = f"""# 🦁 九州自然動物園 Jungle Bus 每日完售紀錄
 
@@ -227,8 +224,8 @@ def generate_readme_md(today_summary: str, sold_out_records: list):
 
 ### 📅 每日完售歷史清單
 
-| 日期 | 星期 | 完售時間 | 紀錄內容 |
-| :--- | :--- | :--- | :--- |
+| 日期 | 星期 | 完售時間 |
+| :--- | :--- | :--- |
 {rows}
 
 ---
