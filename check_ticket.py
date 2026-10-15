@@ -301,30 +301,29 @@ def main():
         append_history_log(log_line)
         return
 
+    # 若今日尚無紀錄，在當天第一次成功檢查時立即建立一筆預設紀錄（確保每天都有一行）
+    if not existing_today:
+        existing_today = {
+            "date": today_str,
+            "weekday": weekday_str,
+            "few_left_time": "-",
+            "sold_out_time": "-",
+            "message": ""
+        }
+        daily_records.append(existing_today)
+
     # 判斷完售
     if SOLD_OUT_KEYWORD in html:
         current_box_class = "soldout"
-        if not existing_today:
-            new_record = {
-                "date": today_str,
-                "weekday": weekday_str,
-                "few_left_time": "-",
-                "sold_out_time": time_str,
-                "message": f"在{now.year}年{now.month}月{now.day}日，{weekday_str}，Jungle Bus 票在{time_str}賣完"
-            }
-            daily_records.append(new_record)
-            log_line = f"[{now_str}] [完售] 首次偵測到完售: {new_record['message']}"
-            today_summary = new_record["message"]
+        existing_today["sold_out_time"] = time_str
+        existing_today["message"] = f"在{now.year}年{now.month}月{now.day}日，{weekday_str}，Jungle Bus 票在{time_str}賣完"
+        log_line = f"[{now_str}] [完售] 首次偵測到完售: {existing_today['message']}"
+
+        few_time = existing_today.get("few_left_time", "-")
+        if few_time != "-":
+            today_summary = f"今日已完售！在{now.year}年{now.month}月{now.day}日，{weekday_str}，Jungle Bus 票在{time_str}賣完（於 {few_time} 首度剩餘少量）"
         else:
-            existing_today["sold_out_time"] = time_str
-            existing_today["message"] = f"在{now.year}年{now.month}月{now.day}日，{weekday_str}，Jungle Bus 票在{time_str}賣完"
-            log_line = f"[{now_str}] [完售] 首次偵測到完售: {existing_today['message']}"
-            
-            few_time = existing_today.get("few_left_time", "-")
-            if few_time != "-":
-                today_summary = f"今日已完售！在{now.year}年{now.month}月{now.day}日，{weekday_str}，Jungle Bus 票在{time_str}賣完（於 {few_time} 首度剩餘少量）"
-            else:
-                today_summary = existing_today["message"]
+            today_summary = existing_today["message"]
 
         print(log_line)
         append_history_log(log_line)
@@ -332,27 +331,15 @@ def main():
     # 判斷剩餘少量
     elif FEW_LEFT_KEYWORD in html:
         current_box_class = "fewleft"
-        if not existing_today:
-            new_record = {
-                "date": today_str,
-                "weekday": weekday_str,
-                "few_left_time": time_str,
-                "sold_out_time": "-",
-                "message": ""
-            }
-            daily_records.append(new_record)
+        if existing_today.get("few_left_time", "-") == "-":
+            existing_today["few_left_time"] = time_str
             log_line = f"[{now_str}] [剩餘少量] 今日首次出現剩餘少量提示 (時間: {time_str})"
-            today_summary = f"今日票券所剩無幾（於 {time_str} 首度出現剩餘少量提示，目前尚未完售）"
         else:
-            if existing_today.get("few_left_time", "-") == "-":
-                existing_today["few_left_time"] = time_str
-                log_line = f"[{now_str}] [剩餘少量] 今日首次出現剩餘少量提示 (時間: {time_str})"
-            else:
-                first_few = existing_today["few_left_time"]
-                log_line = f"[{now_str}] [剩餘少量] 維持剩餘少量狀態 (首次告急時間: {first_few})"
+            first_few = existing_today["few_left_time"]
+            log_line = f"[{now_str}] [剩餘少量] 維持剩餘少量狀態 (首次告急時間: {first_few})"
 
-            first_few = existing_today.get("few_left_time", time_str)
-            today_summary = f"今日票券所剩無幾（於 {first_few} 首度出現剩餘少量提示，目前尚未完售）"
+        first_few = existing_today.get("few_left_time", time_str)
+        today_summary = f"今日票券所剩無幾（於 {first_few} 首度出現剩餘少量提示，目前尚未完售）"
 
         print(log_line)
         append_history_log(log_line)
@@ -364,7 +351,7 @@ def main():
         print(log_line)
         append_history_log(log_line)
 
-        if existing_today and existing_today.get("few_left_time", "-") != "-":
+        if existing_today.get("few_left_time", "-") != "-":
             first_few = existing_today["few_left_time"]
             today_summary = f"今日票券曾於 {first_few} 提示剩餘少量，目前持續販售中 (最後檢查: {time_str} JST)"
         else:
