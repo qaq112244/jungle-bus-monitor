@@ -55,3 +55,4 @@
 [2026-10-17 08:53:36] [尚未完售] 正常販售中 (未出現完售或告急提示)
 [2026-10-17 09:38:56] [連線異常] 抓取官網失敗: HTTPSConnectionPool(host='africansafari.co.jp', port=443): Max retries exceeded with url: /jungle-bus/?_t=1792197536338 (Caused by ConnectTimeoutError(<HTTPSConnection(host='africansafari.co.jp', port=443) at 0x7fd4a6f623d0>, 'Connection to africansafari.co.jp timed out. (connect timeout=15)'))
 [2026-10-17 10:19:28] [尚未完售] 正常販售中 (未出現完售或告急提示)
+[2026-10-17 10:48:49] [尚未完售] 正常販售中 (未出現完售或告急提示)
