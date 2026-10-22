@@ -55,6 +55,13 @@
       "few_left_time": "-",
       "sold_out_time": "13:09",
       "message": "在2026年10月22日，星期四，Jungle Bus 票在13:09賣完"
+    },
+    {
+      "date": "2026-10-23",
+      "weekday": "星期五",
+      "few_left_time": "-",
+      "sold_out_time": "-",
+      "message": ""
     }
   ]
 }
