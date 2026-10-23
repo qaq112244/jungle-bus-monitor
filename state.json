@@ -62,6 +62,13 @@
       "few_left_time": "-",
       "sold_out_time": "-",
       "message": ""
+    },
+    {
+      "date": "2026-10-24",
+      "weekday": "星期六",
+      "few_left_time": "-",
+      "sold_out_time": "-",
+      "message": ""
     }
   ]
 }
