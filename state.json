@@ -118,6 +118,13 @@
       "few_left_time": "-",
       "sold_out_time": "-",
       "message": ""
+    },
+    {
+      "date": "2026-11-01",
+      "weekday": "星期日",
+      "few_left_time": "-",
+      "sold_out_time": "-",
+      "message": ""
     }
   ]
 }
