@@ -160,6 +160,13 @@
       "few_left_time": "-",
       "sold_out_time": "-",
       "message": ""
+    },
+    {
+      "date": "2026-11-07",
+      "weekday": "星期六",
+      "few_left_time": "-",
+      "sold_out_time": "-",
+      "message": ""
     }
   ]
 }
